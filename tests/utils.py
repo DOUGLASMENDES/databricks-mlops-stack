@@ -16,14 +16,39 @@ def parametrize_by_cloud(fn):
     return wrapper
 
 
+def parametrize_by_project_generation_params(fn):
+    @pytest.mark.parametrize(
+        "cloud,cicd_platform,include_feature_store",
+        [
+            ("aws", "GitHub Actions", "no"),
+            ("azure", "GitHub Actions", "no"),
+            ("azure", "Azure DevOps", "no"),
+            ("aws", "GitHub Actions", "yes"),
+            ("azure", "GitHub Actions", "yes"),
+            ("aws", "GitHub Actions for GitHub Enterprise Servers", "no"),
+            ("azure", "GitHub Actions for GitHub Enterprise Servers", "no"),
+            ("aws", "GitHub Actions for GitHub Enterprise Servers", "yes"),
+            ("azure", "GitHub Actions for GitHub Enterprise Servers", "yes"),
+            #  ADO + Feature Store is not supported yet.
+            # ("azure", "Azure DevOps", "yes""),
+        ],
+    )
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
 @pytest.fixture
-def generated_project_dir(tmpdir, cloud):
+def generated_project_dir(tmpdir, cloud, cicd_platform, include_feature_store):
     generate(
         tmpdir,
         {
             "project_name": "my-mlops-project",
             "cloud": cloud,
-            "mlflow_experiment_parent_dir": "/tmp",
+            "cicd_platform": cicd_platform,
+            "include_feature_store": include_feature_store,
             "databricks_staging_workspace_host": "https://adb-3214.67.azuredatabricks.net",
             "databricks_prod_workspace_host": "https://adb-345.89.azuredatabricks.net",
             "default_branch": "main",

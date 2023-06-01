@@ -14,7 +14,7 @@ However, in many cases you may need to customize the stack, for example if:
 
 **Note**: the development loop for your custom stack is the same as for iterating on the
 default stack. Before getting started, we encourage you to read
-the [contributor guide](README.md#contributing) to learn how to 
+the [contributor guide](README.md#contributing) to learn how to
 make, preview, and test changes to your custom stack.
 
 ### Fork the default stack repo
@@ -45,39 +45,41 @@ parameters substituted-in, and then copy the generated project contents back int
 ## Customize individual components
 
 ### Example ML code
-The default stack provides example ML code using [MLflow pipelines](https://mlflow.org/docs/latest/pipelines.html#).
+The default stack provides example ML code using [MLflow recipes](https://mlflow.org/docs/latest/recipes.html#).
 You may want to customize the example code, e.g. further prune it down into a skeleton for data scientists
-to fill out, or remove and replace the use of MLflow Pipelines if you expect data scientists to work on problem
-types that are currently unsupported by MLflow Pipelines. 
+to fill out, or remove and replace the use of MLflow Recipes if you expect data scientists to work on problem
+types that are currently unsupported by MLflow Recipes.
 
 If you customize this component, you can still use the CI/CD and ML resource components to build production ML pipelines, as long as you provide ML
 notebooks with the expected interface for model training and inference under
 `{{cookiecutter_project_name}}/notebooks/`. See code comments in files under
 `{{cookiecutter_project_name}}/notebooks/` for the expected interface & behavior of these notebooks.
 
-You may also want to update developer-facing docs under `{{cookiecutter.project_name}}/docs/ml-developer-guide.md`,
-which will be read by users of your stack.
+You may also want to update developer-facing docs under `{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/docs/ml-developer-guide.md`
+or `{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/docs/ml-developer-guide-fs.md`, which will be read by users of your stack.
 
 ### CI/CD workflows
 The default stack currently has the following sub-components for CI/CD:
-* CI/CD workflow logic defined under `{{cookiecutter.project_name}}/.github/` for testing and deploying ML code and models
-* Automated scripts and docs for setting up CI/CD under `{{cookiecutter.project_name}}/.mlops-setup-scripts/`
+* CI/CD workflow logic defined under `{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/.github/` for testing and deploying ML code and models
+* Automated scripts and docs for setting up CI/CD under `{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/.mlops-setup-scripts/`
 * Logic to trigger model deployment through REST API calls to your CD system, when model training completes.
-  This logic is currently captured in `{{cookiecutter.project_name}}/notebooks/TriggerModelDeploy.py`
+  This logic is currently captured in `{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/{{cookiecutter.project_name_alphanumeric_underscore}}/deployment/model_deployment/notebooks/TriggerModelDeploy.py`
 
-### ML resource config
-ML resource config (Terraform code definitions of ML jobs, experiments, etc) can be found under
-``{{cookiecutter.project_name}}/databricks-config``, along with docs. This component depends on
-the MLOps setup scripts described above in the CI/CD component (`{{cookiecutter.project_name}}/.mlops-setup-scripts`).
+### ML resource configs
+Root ML resource config file can be found as ``{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/{{cookiecutter.project_name_alphanumeric_underscore}}/bundle.yml``. 
+It defines the ML config resources to be included and workspace host for each environment.
+
+ML resource configs (databricks CLI bundles code definitions of ML jobs, experiments, models etc) can be found under 
+``{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/{{cookiecutter.project_name_alphanumeric_underscore}}/databricks-resources``, along with docs.
 
 You can update this component to customize the default ML pipeline structure for new ML projects in your organization,
 e.g. add additional model inference jobs or modify the default instance type used in ML jobs.
 
 When updating this component, you may want to update developer-facing docs in
-`{{cookiecutter.project_name}}/databricks-config/README.md`.
+`{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/{{cookiecutter.project_name_alphanumeric_underscore}}/databricks-resources/README.md`.
 
 ### Docs
 After making stack customizations, make any changes needed to
-the stack docs under `{{cookiecutter.project_name}}/docs` and in the main README
-(`{{cookiecutter.project_name}}/README.md`) to reflect any updates you've made to the stack.
-For example, you may want to include a link to your custom stack in `{{cookiecutter.project_name}}/README.md`.
+the stack docs under `{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/docs` and in the main README
+(`{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/README.md`) to reflect any updates you've made to the stack.
+For example, you may want to include a link to your custom stack in `{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}/README.md`.

@@ -10,16 +10,20 @@ from utils import (
     paths,
     generated_project_dir,
     parametrize_by_cloud,
+    parametrize_by_project_generation_params,
 )
 from unittest import mock
 
 DEFAULT_PROJECT_NAME = "my-mlops-project"
+DEFAULT_PROJECT_DIRECTORY = "my_mlops_project"
 # UUID that when set as project name, prevents the removal of files needed in testing
 TEST_PROJECT_NAME = "27896cf3-bb3e-476e-8129-96df0406d5c7"
+TEST_PROJECT_DIRECTORY = "27896cf3_bb3e_476e_8129_96df0406d5c7"
 DEFAULT_PARAM_VALUES = {
     "default_branch": "main",
     "release_branch": "release",
     "read_user_group": "users",
+    "include_feature_store": "no",
 }
 DEFAULT_PARAMS_AZURE = {
     "cloud": "azure",
@@ -68,7 +72,7 @@ def assert_no_disallowed_strings_in_files(
         assert_no_disallowed_strings(path)
 
 
-@parametrize_by_cloud
+@parametrize_by_project_generation_params
 def test_no_template_strings_after_param_substitution(generated_project_dir):
     assert_no_disallowed_strings_in_files(
         file_paths=[
@@ -83,7 +87,8 @@ def test_no_template_strings_after_param_substitution(generated_project_dir):
 def test_no_databricks_workspace_urls():
     # Test that there are no accidental hardcoded Databricks workspace URLs included in stack source files
     cookiecutter_dir = (
-        pathlib.Path(__file__).parent.parent / "{{cookiecutter.project_name}}"
+        pathlib.Path(__file__).parent.parent
+        / "{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}"
     )
     test_paths = [
         os.path.join(cookiecutter_dir, path) for path in paths(cookiecutter_dir)
@@ -100,7 +105,8 @@ def test_no_databricks_workspace_urls():
 
 def test_no_databricks_doc_strings_before_project_generation():
     cookiecutter_dir = (
-        pathlib.Path(__file__).parent.parent / "{{cookiecutter.project_name}}"
+        pathlib.Path(__file__).parent.parent
+        / "{{cookiecutter.root_dir__update_if_you_intend_to_use_monorepo}}"
     )
     test_paths = [
         os.path.join(cookiecutter_dir, path) for path in paths(cookiecutter_dir)
@@ -108,32 +114,20 @@ def test_no_databricks_doc_strings_before_project_generation():
     assert_no_disallowed_strings_in_files(
         file_paths=test_paths,
         disallowed_strings=[
-            "https://docs.microsoft.com/en-us/azure/databricks",
+            "https://learn.microsoft.com/en-us/azure/databricks",
             "https://docs.databricks.com/",
             "https://docs.gcp.databricks.com/",
         ],
     )
 
 
-@parametrize_by_cloud
-def test_yaml_param_substitution(generated_project_dir, cloud):
-    expected_node_type = "Standard_D3_v2" if cloud == "azure" else "i3.xlarge"
-    vars_in_workflow = [
-        "DATABRICKS_HOST: https://adb-3214.67.azuredatabricks.net",
-        f"NODE_TYPE_ID: {expected_node_type}",
-    ]
-    actual_workflow_content = read_workflow(generated_project_dir)
-    for var in vars_in_workflow:
-        assert (var) in actual_workflow_content
-
-
 @pytest.mark.large
-@parametrize_by_cloud
+@parametrize_by_project_generation_params
 def test_markdown_links(generated_project_dir):
     markdown_checker_configs(generated_project_dir)
     subprocess.run(
         """
-        npm install -g markdown-link-check
+        npm install -g markdown-link-check@3.10.3
         find . -name \*.md -print0 | xargs -0 -n1 markdown-link-check -c ./checker-config.json
         """,
         shell=True,
@@ -147,30 +141,6 @@ def test_markdown_links(generated_project_dir):
     "invalid_params",
     [
         {
-            "mlflow_experiment_parent_dir": "bad-dir-with-no-slash",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/Repos",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/Repos/my-ml-model",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/Users",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/Users/test@databricks.com",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/Users/test@databricks.com/",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/",
-        },
-        {
-            "mlflow_experiment_parent_dir": "///",
-        },
-        {
             "databricks_staging_workspace_host": "http://no-https",
         },
         {
@@ -180,7 +150,7 @@ def test_markdown_links(generated_project_dir):
             "project_name": "a",
         },
         {
-            "project_name": "a-b",
+            "project_name": "a-",
         },
         {
             "project_name": "Name with spaces",
@@ -204,49 +174,17 @@ def test_generate_fails_with_invalid_params(tmpdir, invalid_params):
 @pytest.mark.parametrize(
     "valid_params",
     [
-        {
-            "mlflow_experiment_parent_dir": "/Users/test@databricks.com/project",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/Users/test@databricks.com/project/",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/Repos-fake",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/Users-fake",
-        },
-        {
-            "mlflow_experiment_parent_dir": "/ml-projects/my-ml-project",
-        },
+        {},
     ],
 )
 def test_generate_succeeds_with_valid_params(tmpdir, valid_params):
     generate(tmpdir, valid_params)
 
 
-@pytest.mark.parametrize(
-    "experiment_parent_dir,expected_dir",
-    [
-        ("/mlops-project-directory/", "/mlops-project-directory"),
-        ("/Users/test@databricks.com/project/", "/Users/test@databricks.com/project"),
-    ],
-)
-def test_strip_slash_if_needed_from_mlflow_experiment_parent_dir(
-    tmpdir, experiment_parent_dir, expected_dir
+@parametrize_by_project_generation_params
+def test_generate_project_with_default_values(
+    tmpdir, cloud, cicd_platform, include_feature_store
 ):
-    params = {
-        "mlflow_experiment_parent_dir": experiment_parent_dir,
-    }
-    generate(tmpdir, params)
-    tf_config_contents = (
-        tmpdir / DEFAULT_PROJECT_NAME / "databricks-config/prod/locals.tf"
-    ).read_text("utf-8")
-    assert f'mlflow_experiment_parent_dir = "{expected_dir}"' in tf_config_contents
-
-
-@parametrize_by_cloud
-def test_generate_project_with_default_values(tmpdir, cloud):
     """
     Asserts the default parameter values for the stack. The project name and experiment
     parent directory are excluded from this test as they covered in other tests. If this test fails
@@ -255,7 +193,12 @@ def test_generate_project_with_default_values(tmpdir, cloud):
     - The default param values in the substitution logic in the pre_gen_project.py hook are up to date.
     - The default param values in the help strings in cookiecutter.json are up to date.
     """
-    context = {"project_name": TEST_PROJECT_NAME, "cloud": cloud}
+    context = {
+        "project_name": TEST_PROJECT_NAME,
+        "cloud": cloud,
+        "cicd_platform": cicd_platform,
+    }
+    # Testing that Azure is the default option.
     if cloud == "azure":
         del context["cloud"]
     generate(tmpdir, context=context)
@@ -268,6 +211,34 @@ def test_generate_project_with_default_values(tmpdir, cloud):
         params = {**DEFAULT_PARAM_VALUES, **DEFAULT_PARAMS_AWS}
     for param, value in params.items():
         assert f"{param}={value}" in test_file_contents
+
+
+@parametrize_by_project_generation_params
+def test_generate_project_check_feature_store_output(
+    tmpdir, cloud, cicd_platform, include_feature_store
+):
+    """
+    Asserts the behavior of feature store-related artifacts when generating Stacks.
+    """
+    context = {
+        "project_name": TEST_PROJECT_NAME,
+        "cloud": cloud,
+        "cicd_platform": cicd_platform,
+        "include_feature_store": include_feature_store,
+    }
+    generate(tmpdir, context=context)
+    fs_notebook_path = (
+        tmpdir
+        / TEST_PROJECT_NAME
+        / TEST_PROJECT_DIRECTORY
+        / "feature_engineering"
+        / "notebooks"
+        / "GenerateAndWriteFeatures.py"
+    )
+    if include_feature_store == "yes":
+        assert os.path.isfile(fs_notebook_path)
+    else:
+        assert not os.path.isfile(fs_notebook_path)
 
 
 @pytest.mark.parametrize(
@@ -305,13 +276,6 @@ def test_generate_project_default_project_name_params(tmpdir):
     generate(tmpdir, context={})
     readme_contents = (tmpdir / DEFAULT_PROJECT_NAME / "README.md").read_text("utf-8")
     assert DEFAULT_PROJECT_NAME in readme_contents
-    tf_config_contents = (
-        tmpdir / DEFAULT_PROJECT_NAME / "databricks-config/prod/locals.tf"
-    ).read_text("utf-8")
-    assert (
-        f'mlflow_experiment_parent_dir = "/{DEFAULT_PROJECT_NAME}"'
-        in tf_config_contents
-    )
 
 
 @pytest.mark.parametrize(
