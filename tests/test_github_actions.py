@@ -1,6 +1,7 @@
 import subprocess
 import pytest
 from utils import (
+    databricks_cli,
     generated_project_dir,
     parametrize_by_cloud,
     parametrize_by_project_generation_params,
@@ -8,9 +9,12 @@ from utils import (
 
 
 @pytest.mark.parametrize(
-    "cicd_platform", ["GitHub Actions", "GitHub Actions for GitHub Enterprise Servers"]
+    "cicd_platform", ["github_actions", "github_actions_for_github_enterprise_servers"]
 )
-@pytest.mark.parametrize("include_feature_store", ["yes", "no"])
+@pytest.mark.parametrize(
+    "include_feature_store, include_mlflow_recipes",
+    [("yes", "no"), ("no", "yes"), ("no", "no")],
+)
 @parametrize_by_cloud
 def test_generated_yaml_format(cicd_platform, generated_project_dir):
     # Note: actionlint only works when the directory is a git project. Thus we begin by initiatilizing
@@ -30,9 +34,10 @@ def test_generated_yaml_format(cicd_platform, generated_project_dir):
 
 @pytest.mark.large
 @pytest.mark.parametrize(
-    "cicd_platform", ["GitHub Actions", "GitHub Actions for GitHub Enterprise Servers"]
+    "cicd_platform", ["github_actions", "github_actions_for_github_enterprise_servers"]
 )
 @pytest.mark.parametrize("include_feature_store", ["no"])
+@pytest.mark.parametrize("include_mlflow_recipes", ["yes", "no"])
 @parametrize_by_cloud
 def test_run_unit_tests_workflow(cicd_platform, generated_project_dir):
     """Test that the GitHub workflow for running unit tests in the materialized project passes"""
@@ -52,9 +57,10 @@ def test_run_unit_tests_workflow(cicd_platform, generated_project_dir):
 
 @pytest.mark.large
 @pytest.mark.parametrize(
-    "cicd_platform", ["GitHub Actions", "GitHub Actions for GitHub Enterprise Servers"]
+    "cicd_platform", ["github_actions", "github_actions_for_github_enterprise_servers"]
 )
 @pytest.mark.parametrize("include_feature_store", ["yes"])
+@pytest.mark.parametrize("include_mlflow_recipes", ["no"])
 @parametrize_by_cloud
 def test_run_unit_tests_feature_store_workflow(cicd_platform, generated_project_dir):
     """Test that the GitHub workflow for running unit tests passes for feature store"""
